@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>拉格朗日中值定理 · 动画练习</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg0: #070b14;
+    --bg1: #0d1526;
+    --card: rgba(18, 28, 48, 0.72);
+    --card-border: rgba(120, 160, 255, 0.14);
+    --glass: rgba(255, 255, 255, 0.04);
+    --text: #e8eefc;
+    --muted: #8b9bb8;
+    --accent: #6ea8ff;
+    --accent2: #a78bfa;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --chord: #fbbf24;
+    --tangent: #34d399;
+    --curve: #6ea8ff;
+    --glow: rgba(110, 168, 255, 0.45);
+    --radius: 18px;
+    --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    --font: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg0);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  .bg-orb {
+    position: fixed; inset: auto;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bg-orb.a { top: -120px; left: -80px; background: #1e3a8a; }
+  .bg-orb.b { bottom: 10%; right: -100px; background: #5b21b6; opacity: 0.28; }
+  .bg-orb.c { top: 45%; left: 40%; background: #0e7490; width: 380px; height: 380px; opacity: 0.18; }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 18px 80px;
+  }
+
+  header.hero {
+    text-align: center;
+    padding: 28px 12px 18px;
+  }
+  header.hero .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--glass);
+    border: 1px solid var(--card-border);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+  }
+  header.hero h1 {
+    font-size: clamp(1.55rem, 4vw, 2.15rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(120deg, #e8eefc 10%, #6ea8ff 55%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  header.hero p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 4px 18px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stepper::-webkit-scrollbar { display: none; }
+  .step-btn {
+    flex: 1 0 auto;
+    min-width: 88px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .step-btn .n {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 11px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid transparent;
+  }
+  .step-btn:hover { border-color: rgba(110,168,255,0.4); color: var(--text); }
+  .step-btn.active {
+    color: var(--text);
+    border-color: rgba(110,168,255,0.55);
+    box-shadow: 0 0 0 1px rgba(110,168,255,0.25), 0 8px 24px rgba(30,58,138,0.35);
+    background: linear-gradient(160deg, rgba(30,58,138,0.55), rgba(18,28,48,0.85));
+  }
+  .step-btn.active .n {
+    background: var(--accent);
+    color: #061018;
+    border-color: transparent;
+  }
+  .step-btn.done .n {
+    background: rgba(52,211,153,0.2);
+    color: var(--good);
+    border-color: rgba(52,211,153,0.35);
+  }
+
+  /* Panels */
+  .panel {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  .panel.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
+    padding: 22px 22px 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .card h3 {
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin: 14px 0 8px;
+    color: #c5d4f0;
+  }
+  .card p, .card li { color: #b8c6de; font-size: 0.93rem; }
+  .card ul { padding-left: 1.15rem; margin: 8px 0; }
+  .card li { margin: 4px 0; }
+
+  .callout {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(110,168,255,0.08);
+    border: 1px solid rgba(110,168,255,0.22);
+    color: #c9d9f5;
+    font-size: 0.9rem;
+  }
+  .callout strong { color: var(--accent); }
+
+  /* Math blocks */
+  .math-block {
+    margin: 14px 0;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(167,139,250,0.25);
+    text-align: center;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #eef2ff;
+  }
+  .math-block .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+    line-height: 1.15;
+  }
+  .math-block .frac span { padding: 0 6px; }
+  .math-block .frac .num { border-bottom: 1.5px solid #c5d0ea; padding-bottom: 2px; }
+  .math-block .small { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+
+  /* Intuition visual */
+  .intuition-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  @media (max-width: 640px) {
+    .intuition-grid { grid-template-columns: 1fr; }
+  }
+  .mini-card {
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border);
+  }
+  .mini-card .emoji { font-size: 1.4rem; margin-bottom: 6px; }
+  .mini-card strong { display: block; color: var(--text); margin-bottom: 4px; font-size: 0.92rem; }
+
+  /* Demo controls */
+  .demo-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .fn-switch {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .chip:hover { color: var(--text); border-color: rgba(110,168,255,0.4); }
+  .chip.active {
+    color: #061018;
+    background: linear-gradient(120deg, var(--accent), #8b7cf7);
+    border-color: transparent;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(165deg, #0a1222, #0f1a30 60%, #0c1628);
+    border: 1px solid rgba(110,168,255,0.18);
+    box-shadow: inset 0 0 40px rgba(30,58,138,0.25);
+  }
+  #demoCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+  }
+
+  .readout {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  @media (max-width: 560px) {
+    .readout { grid-template-columns: 1fr; }
+  }
+  .stat {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--card-border);
+  }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .stat .val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .stat.chord .val { color: var(--chord); }
+  .stat.tangent .val { color: var(--tangent); }
+  .match-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--muted);
+    transition: all 0.3s ease;
+  }
+  .match-pill.on {
+    color: #062016;
+    background: linear-gradient(120deg, #34d399, #6ee7b7);
+    border-color: transparent;
+    box-shadow: 0 0 24px rgba(52,211,153,0.35);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .btn {
+    appearance: none;
+    border: none;
+    border-radius: 11px;
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(120deg, #4f8fff, #7c6cf0);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(79,143,255,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 10px 28px rgba(79,143,255,0.5); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+  }
+  .btn-ghost:hover { border-color: rgba(110,168,255,0.45); }
+
+  .scrub {
+    flex: 1;
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .scrub label {
+    font-size: 12px;
+    color: var(--muted);
+    white-space:nowrap;
+  }
+  .scrub input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(52,211,153,0.25), rgba(110,168,255,0.45));
+    outline: none;
+  }
+  .scrub input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--tangent);
+    box-shadow: 0 0 12px rgba(52,211,153,0.55);
+    cursor: pointer;
+  }
+
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  /* Examples */
+  .step-reveal {
+    margin-top: 10px;
+  }
+  .reveal-item {
+    display: none;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid var(--accent2);
+    animation: fadeUp 0.35s ease;
+  }
+  .reveal-item.show { display: block; }
+  .reveal-item .tag {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent2);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  /* Practice */
+  .problem {
+    padding: 16px;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.22);
+    border: 1px solid var(--card-border);
+    margin-bottom: 12px;
+  }
+  .problem .q { font-weight: 600; color: var(--text); margin-bottom: 10px; font-size: 0.95rem; }
+  .problem .hint { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+  .answer-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .answer-row input {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .answer-row input:focus { border-color: rgba(110,168,255,0.6); }
+  .feedback {
+    margin-top: 8px;
+    font-size: 0.88rem;
+    min-height: 1.2em;
+    font-weight: 500;
+  }
+  .feedback.ok { color: var(--good); }
+  .feedback.no { color: var(--bad); }
+  .feedback.soft { color: var(--warn); }
+
+  footer.note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 28px;
+    opacity: 0.75;
+  }
+</style>
+</head>
+<body>
+  <div class="bg-orb a" aria-hidden="true"></div>
+  <div class="bg-orb b" aria-hidden="true"></div>
+  <div class="bg-orb c" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header class="hero">
+      <div class="badge">微积分 · 可视化学习</div>
+      <h1>拉格朗日中值定理 · 动画练习</h1>
+      <p>从直觉到定理，用动画看清「割线与切线平行」——再动手解题。</p>
+    </header>
+
+    <nav class="stepper" id="stepper" aria-label="学习进度">
+      <button class="step-btn active" data-step="0"><span class="n">1</span>直觉</button>
+      <button class="step-btn" data-step="1"><span class="n">2</span>定理</button>
+      <button class="step-btn" data-step="2"><span class="n">3</span>动画演示</button>
+      <button class="step-btn" data-step="3"><span class="n">4</span>例题</button>
+      <button class="step-btn" data-step="4"><span class="n">5</span>练习</button>
+    </nav>
+
+    <!-- 1 直觉 -->
+    <section class="panel active" data-panel="0">
+      <div class="card">
+        <h2>先建立直觉</h2>
+        <p>想象你开车从 A 到 B：平均速度是「总路程 ÷ 总时间」。途中某一瞬间，速度表的读数一定等于这个平均速度——否则你到不了终点。</p>
+        <div class="intuition-grid">
+          <div class="mini-card">
+            <div class="emoji">📏</div>
+            <strong>割线（平均变化率）</strong>
+            <p>连接曲线两端点的直线，斜率 = 整体平均变化。</p>
+          </div>
+          <div class="mini-card">
+            <div class="emoji">✏️</div>
+            <strong>切线（瞬时变化率）</strong>
+            <p>贴着曲线某一点的直线，斜率 = 该点导数 f′(c)。</p>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>核心画面：</strong>在光滑曲线上，总能找到一点 c，使得该点切线与两端割线<strong>平行</strong>（斜率相等）。
+        </div>
+      </div>
+      <div class="nav-row">
+        <span></span>
+        <button class="btn btn-primary" onclick="goStep(1)">下一步：看定理 →</button>
+      </div>
+    </section>
+
+    <!-- 2 定理 -->
+    <section class="panel" data-panel="1">
+      <div class="card">
+        <h2>拉格朗日中值定理</h2>
+        <p>若函数 f 在闭区间 [a, b] 上连续，在开区间 (a, b) 内可导，则存在至少一点 c ∈ (a, b)，使得：</p>
+        <div class="math-block">
+          f′(c) =
+          <span class="frac">
+            <span class="num">f(b) − f(a)</span>
+            <span>b − a</span>
+          </span>
+          <div class="small">左边：切线斜率 · 右边：割线斜率</div>
+        </div>
+        <h3>条件要记牢</h3>
+        <ul>
+          <li>在 [a, b] 上<strong>连续</strong>（端点也要好）</li>
+          <li>在 (a, b) 内<strong>可导</strong>（中间不能有尖角、断点）</li>
+        </ul>
+        <h3>几何含义</h3>
+        <p>端点弦的斜率，一定能在曲线内部某处被切线「复制」出来——动画里你会亲眼看到这一点。</p>
+        <div class="callout">
+          <strong>小提示：</strong>c 的存在性保证了，但不一定唯一；练习里我们求的是满足等式的具体 c。
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goStep(0)">← 直觉</button>
+        <button class="btn btn-primary" onclick="goStep(2)">下一步：动画演示 →</button>
+      </div>
+    </section>
+
+    <!-- 3 动画 -->
+    <section class="panel" data-panel="2">
+      <div class="card">
+        <h2>动画演示：割线 → 切线平行</h2>
+        <p style="margin-bottom:12px">选择函数，按下播放：曲线画出 → 端点割线亮起 → 切线沿曲线滑动，直到与割线平行，标出 c。</p>
+
+        <div class="demo-toolbar">
+          <div class="fn-switch" id="fnSwitch">
+            <button class="chip active" data-fn="quad">f(x)=x² · [0,2]</button>
+            <button class="chip" data-fn="sqrt">f(x)=√x · [1,4]</button>
+            <button class="chip" data-fn="sin">f(x)=sin x · [0,π]</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="demoCanvas" width="900" height="480" aria-label="拉格朗日中值定理动画画布"></canvas>
+        </div>
+
+        <div class="readout">
+          <div class="stat chord">
+            <div class="label">割线斜率</div>
+            <div class="val" id="chordSlope">—</div>
+          </div>
+          <div class="stat tangent">
+            <div class="label">切线斜率 f′(c)</div>
+            <div class="val" id="tanSlope">—</div>
+          </div>
+          <div class="match-pill" id="matchPill">寻找平行…</div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="btnPlay">▶ 播放</button>
+          <button class="btn btn-ghost" id="btnPause">⏸ 暂停</button>
+          <button class="btn btn-ghost" id="btnReplay">↺ 重播</button>
+          <div class="scrub">
+            <label for="cScrub">手动 c</label>
+            <input type="range" id="cScrub" min="0" max="1000" value="0" />
+            <span id="cLabel" style="font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--tangent);min-width:72px">c = —</span>
+          </div>
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goStep(1)">← 定理</button>
+        <button class="btn btn-primary" onclick="goStep(3)">下一步：例题 →</button>
+      </div>
+    </section>
+
+    <!-- 4 例题 -->
+    <section class="panel" data-panel="3">
+      <div class="card">
+        <h2>例题精讲</h2>
+        <p>跟着逐步展开，体会「设方程 → 求导数 → 解出 c」的标准流程。</p>
+
+        <h3>例 1　f(x)=x²，区间 [0, 2]</h3>
+        <div class="step-reveal" id="ex1">
+          <div class="reveal-item" data-i="0">
+            <div class="tag">步骤 1 · 割线斜率</div>
+            <div>
+              <span class="frac" style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15">
+                <span style="border-bottom:1.5px solid #c5d0ea;padding:0 6px 2px">f(2)−f(0)</span>
+                <span style="padding:0 6px">2−0</span>
+              </span>
+              = (4−0)/2 = <strong style="color:var(--chord)">2</strong>
+            </div>
+          </div>
+          <div class="reveal-item" data-i="1">
+            <div class="tag">步骤 2 · 导数</div>
+            f′(x) = 2x，故要 2c = 2 ⇒ <strong style="color:var(--tangent)">c = 1</strong>（∈ (0,2) ✓）
+          </div>
+          <div class="reveal-item" data-i="2">
+            <div class="tag">步骤 3 · 验证</div>
+            切线斜率 f′(1)=2，与割线斜率相同。几何上：切线在 x=1 处与弦平行。
+          </div>
+        </div>
+        <button class="btn btn-ghost" id="btnReveal1" style="margin-top:6px">显示下一步</button>
+
+        <h3>例 2　f(x)=√x，区间 [1, 4]</h3>
+        <div class="step-reveal" id="ex2">
+          <div class="reveal-item" data-i="0">
+            <div class="tag">步骤 1 · 割线斜率</div>
+            (√4 − √1)/(4−1) = (2−1)/3 = <strong style="color:var(--chord)">1/3</strong>
+          </div>
+          <div class="reveal-item" data-i="1">
+            <div class="tag">步骤 2 · 导数与方程</div>
+            f′(x)=1/(2√x)，令 1/(2√c) = 1/3 ⇒ 2√c = 3 ⇒ √c = 3/2 ⇒ <strong style="color:var(--tangent)">c = 9/4</strong>
+          </div>
+          <div class="reveal-item" data-i="2">
+            <div class="tag">步骤 3 · 检验区间</div>
+            9/4 = 2.25 ∈ (1, 4) ✓。这就是定理保证存在的那个点。
+          </div>
+        </div>
+        <button class="btn btn-ghost" id="btnReveal2" style="margin-top:6px">显示下一步</button>
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goStep(2)">← 动画</button>
+        <button class="btn btn-primary" onclick="goStep(4)">下一步：练习 →</button>
+      </div>
+    </section>
+
+    <!-- 5 练习 -->
+    <section class="panel" data-panel="4">
+      <div class="card">
+        <h2>动手练习</h2>
+        <p style="margin-bottom:14px">求出满足中值定理的 c。可用分数、小数或 π/2 等形式作答。</p>
+
+        <div class="problem" data-ans="1" data-tol="0.02">
+          <div class="q">① f(x)=x²，[0, 2]。求 c。</div>
+          <div class="hint">提示：令 f′(c) = (f(2)−f(0))/2</div>
+          <div class="answer-row">
+            <input type="text" placeholder="例如 1 或 1.0" aria-label="第1题答案" />
+            <button class="btn btn-primary check-btn">检查</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+
+        <div class="problem" data-ans="2.25" data-tol="0.02" data-alt="9/4">
+          <div class="q">② f(x)=√x，[1, 4]。求 c。</div>
+          <div class="hint">提示：答案可写 9/4 或 2.25</div>
+          <div class="answer-row">
+            <input type="text" placeholder="例如 9/4" aria-label="第2题答案" />
+            <button class="btn btn-primary check-btn">检查</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+
+        <div class="problem" data-ans="1.5708" data-tol="0.05" data-alt="π/2">
+          <div class="q">③ f(x)=sin x，[0, π]。求 c。</div>
+          <div class="hint">提示：f′(x)=cos x，割线斜率为 0</div>
+          <div class="answer-row">
+            <input type="text" placeholder="例如 π/2" aria-label="第3题答案" />
+            <button class="btn btn-primary check-btn">检查</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goStep(3)">← 例题</button>
+        <button class="btn btn-primary" onclick="goStep(2)">再看一遍动画</button>
+      </div>
+    </section>
+
+    <footer class="note">拉格朗日中值定理 · 单页交互练习 · 可本地打开分享</footer>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ========== Stepper ========== */
+  const stepBtns = [...document.querySelectorAll('.step-btn')];
+  const panels = [...document.querySelectorAll('.panel')];
+  let current = 0;
+  const visited = new Set([0]);
+
+  window.goStep = function (i) {
+    i = Math.max(0, Math.min(panels.length - 1, i));
+    current = i;
+    visited.add(i);
+    stepBtns.forEach((b, idx) => {
+      b.classList.toggle('active', idx === i);
+      b.classList.toggle('done', visited.has(idx) && idx !== i);
+    });
+    panels.forEach((p, idx) => p.classList.toggle('active', idx === i));
+    if (i === 2) {
+      // kick a gentle redraw when entering demo
+      demo.resize();
+      demo.draw();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  stepBtns.forEach(b => b.addEventListener('click', () => goStep(+b.dataset.step)));
+
+  /* ========== Functions catalog ========== */
+  const FNS = {
+    quad: {
+      label: 'x²',
+      a: 0, b: 2,
+      f: x => x * x,
+      fp: x => 2 * x,
+      cStar: 1,
+      yPad: 0.35,
+    },
+    sqrt: {
+      label: '√x',
+      a: 1, b: 4,
+      f: x => Math.sqrt(x),
+      fp: x => 1 / (2 * Math.sqrt(x)),
+      cStar: 9 / 4,
+      yPad: 0.35,
+    },
+    sin: {
+      label: 'sin x',
+      a: 0, b: Math.PI,
+      f: x => Math.sin(x),
+      fp: x => Math.cos(x),
+      cStar: Math.PI / 2,
+      yPad: 0.45,
+    },
+  };
+
+  /* ========== Demo engine ========== */
+  const canvas = document.getElementById('demoCanvas');
+  const ctx = canvas.getContext('2d');
+  const chordEl = document.getElementById('chordSlope');
+  const tanEl = document.getElementById('tanSlope');
+  const matchPill = document.getElementById('matchPill');
+  const cScrub = document.getElementById('cScrub');
+  const cLabel = document.getElementById('cLabel');
+  const btnPlay = document.getElementById('btnPlay');
+  const btnPause = document.getElementById('btnPause');
+  const btnReplay = document.getElementById('btnReplay');
+
+  const demo = {
+    key: 'quad',
+    // animation phases: 0 idle/build curve, 1 chord, 2 slide tangent, 3 hold match
+    phase: 0,
+    t: 0,           // 0..1 within current phase
+    playing: false,
+    manual: false,  // user scrubbing
+    c: 0,
+    lastTs: 0,
+    dpr: 1,
+    layout: null,
+  };
+
+  function getFn() { return FNS[demo.key]; }
+
+  function chordSlope(fn) {
+    return (fn.f(fn.b) - fn.f(fn.a)) / (fn.b - fn.a);
+  }
+
+  function fmt(n) {
+    if (!Number.isFinite(n)) return '—';
+    const a = Math.abs(n);
+    if (a < 1e-10) return '0';
+    if (Math.abs(n - Math.PI / 2) < 1e-6) return 'π/2';
+    if (Math.abs(n - Math.PI) < 1e-6) return 'π';
+    if (Math.abs(n - 9 / 4) < 1e-6) return '9/4';
+    return (Math.round(n * 1000) / 1000).toString();
+  }
+
+  demo.resize = function () {
+    const wrap = canvas.parentElement;
+    const cssW = wrap.clientWidth;
+    const cssH = Math.max(280, Math.min(480, Math.round(cssW * 0.52)));
+    demo.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(cssW * demo.dpr);
+    canvas.height = Math.round(cssH * demo.dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.setTransform(demo.dpr, 0, 0, demo.dpr, 0, 0);
+    demo.layout = { w: cssW, h: cssH, pad: { l: 56, r: 28, t: 36, b: 44 } };
+  };
+
+  function worldToScreen(x, y, fn, L) {
+    const xmin = fn.a, xmax = fn.b;
+    const ys = [fn.f(fn.a), fn.f(fn.b), fn.f(fn.cStar)];
+    // sample for better bounds
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      ys.push(fn.f(xmin + t * (xmax - xmin)));
+    }
+    let ymin = Math.min(...ys), ymax = Math.max(...ys);
+    const yr = (ymax - ymin) || 1;
+    ymin -= yr * fn.yPad;
+    ymax += yr * fn.yPad;
+    const iw = L.w - L.pad.l - L.pad.r;
+    const ih = L.h - L.pad.t - L.pad.b;
+    const sx = L.pad.l + ((x - xmin) / (xmax - xmin)) * iw;
+    const sy = L.pad.t + ((ymax - y) / (ymax - ymin)) * ih;
+    return { x: sx, y: sy, ymin, ymax, iw, ih };
+  }
+
+  function screenLine(x1, y1, x2, y2, fn, L) {
+    // extend a line through two world points across the plot
+    const p1 = worldToScreen(x1, y1, fn, L);
+    const p2 = worldToScreen(x2, y2, fn, L);
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const span = Math.hypot(L.w, L.h);
+    return {
+      ax: p1.x - ux * span,
+      ay: p1.y - uy * span,
+      bx: p1.x + ux * span,
+      by: p1.y + uy * span,
+      p1, p2,
+    };
+  }
+
+  demo.draw = function () {
+    const fn = getFn();
+    const L = demo.layout || { w: canvas.clientWidth, h: canvas.clientHeight, pad: { l: 56, r: 28, t: 36, b: 44 } };
+    const w = L.w, h = L.h;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // subtle grid
+    ctx.save();
+    ctx.strokeStyle = 'rgba(120,160,255,0.07)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const x = L.pad.l + (i / 5) * (w - L.pad.l - L.pad.r);
+      ctx.beginPath(); ctx.moveTo(x, L.pad.t); ctx.lineTo(x, h - L.pad.b); ctx.stroke();
+    }
+    for (let i = 0; i < 5; i++) {
+      const y = L.pad.t + (i / 4) * (h - L.pad.t - L.pad.b);
+      ctx.beginPath(); ctx.moveTo(L.pad.l, y); ctx.lineTo(w - L.pad.r, y); ctx.stroke();
+    }
+    ctx.restore();
+
+    // axis labels
+    ctx.fillStyle = 'rgba(139,155,184,0.85)';
+    ctx.font = '12px Inter, PingFang SC, sans-serif';
+    ctx.fillText('x', w - L.pad.r + 8, h - L.pad.b + 4);
+    ctx.fillText('y', L.pad.l - 18, L.pad.t - 10);
+    ctx.fillText(fmt(fn.a), L.pad.l - 4, h - L.pad.b + 18);
+    ctx.fillText(fmt(fn.b), w - L.pad.r - 10, h - L.pad.b + 18);
+
+    // progress of curve drawing
+    const curveProg = demo.phase === 0 ? ease(demo.t) : 1;
+    const chordProg = demo.phase === 0 ? 0 : (demo.phase === 1 ? ease(demo.t) : 1);
+    let c;
+    if (demo.manual || demo.phase >= 2) {
+      if (demo.manual) {
+        c = fn.a + (cScrub.value / 1000) * (fn.b - fn.a);
+      } else if (demo.phase === 2) {
+        // slide from a+ε toward cStar then a bit past then settle — actually slide a→b searching
+        const u = ease(demo.t);
+        c = fn.a + u * (fn.b - fn.a);
+      } else {
+        c = fn.cStar;
+      }
+    } else {
+      c = fn.a + 0.15 * (fn.b - fn.a);
+    }
+    // clamp interior
+    const eps = (fn.b - fn.a) * 0.02;
+    c = Math.min(fn.b - eps, Math.max(fn.a + eps, c));
+    demo.c = c;
+
+    // draw curve
+    const N = 120;
+    ctx.save();
+    ctx.beginPath();
+    let started = false;
+    const nDraw = Math.max(2, Math.floor(N * curveProg));
+    for (let i = 0; i <= nDraw; i++) {
+      const x = fn.a + (i / N) * (fn.b - fn.a);
+      const p = worldToScreen(x, fn.f(x), fn, L);
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = '#6ea8ff';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(110,168,255,0.55)';
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+    ctx.restore();
+
+    // endpoints
+    if (curveProg > 0.95) {
+      const A = worldToScreen(fn.a, fn.f(fn.a), fn, L);
+      const B = worldToScreen(fn.b, fn.f(fn.b), fn, L);
+      [[A, 'A'], [B, 'B']].forEach(([P, lab]) => {
+        ctx.beginPath();
+        ctx.arc(P.x, P.y, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#e8eefc';
+        ctx.fill();
+        ctx.fillStyle = 'rgba(232,238,252,0.75)';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText(lab, P.x + 8, P.y - 8);
+      });
+    }
+
+    // chord
+    if (chordProg > 0) {
+      const line = screenLine(fn.a, fn.f(fn.a), fn.b, fn.f(fn.b), fn, L);
+      ctx.save();
+      ctx.beginPath();
+      // grow from A to B
+      const ax = line.p1.x, ay = line.p1.y;
+      const bx = line.p1.x + (line.p2.x - line.p1.x) * chordProg;
+      const by = line.p1.y + (line.p2.y - line.p1.y) * chordProg;
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([8, 6]);
+      ctx.shadowColor = 'rgba(251,191,36,0.65)';
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+      ctx.restore();
+
+      if (chordProg > 0.98) {
+        // faint infinite chord guide
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(line.ax, line.ay);
+        ctx.lineTo(line.bx, line.by);
+        ctx.strokeStyle = 'rgba(251,191,36,0.18)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 8]);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    const mChord = chordSlope(fn);
+    const mTan = fn.fp(c);
+    const match = Math.abs(mTan - mChord) < 0.035 * (1 + Math.abs(mChord));
+
+    // tangent (phases 2+)
+    const showTan = demo.phase >= 2 || demo.manual;
+    if (showTan && chordProg > 0.5) {
+      const yc = fn.f(c);
+      // line: y - yc = m (x - c)
+      const x1 = fn.a - (fn.b - fn.a), x2 = fn.b + (fn.b - fn.a);
+      const y1 = yc + mTan * (x1 - c);
+      const y2 = yc + mTan * (x2 - c);
+      const tl = screenLine(x1, y1, x2, y2, fn, L);
+      const C = worldToScreen(c, yc, fn, L);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(tl.ax, tl.ay);
+      ctx.lineTo(tl.bx, tl.by);
+      ctx.strokeStyle = match ? '#34d399' : '#6ee7b7';
+      ctx.lineWidth = match ? 3 : 2.2;
+      ctx.shadowColor = match ? 'rgba(52,211,153,0.75)' : 'rgba(52,211,153,0.35)';
+      ctx.shadowBlur = match ? 22 : 10;
+      ctx.stroke();
+      ctx.restore();
+
+      // point c
+      ctx.beginPath();
+      ctx.arc(C.x, C.y, match ? 7 : 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = match ? '#34d399' : '#a7f3d0';
+      ctx.shadowColor = 'rgba(52,211,153,0.6)';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = match ? '#34d399' : '#9fe8c8';
+      ctx.font = '700 13px Inter, PingFang SC, sans-serif';
+      ctx.fillText('c = ' + fmt(c), C.x + 10, C.y - 12);
+
+      if (match) {
+        // parallel badge
+        ctx.save();
+        ctx.font = '700 12px Inter, PingFang SC, sans-serif';
+        ctx.fillStyle = '#34d399';
+        ctx.fillText('∥ 平行！斜率相等', Math.min(C.x + 10, w - 140), C.y + 22);
+        ctx.restore();
+      }
+    }
+
+    // title on canvas
+    ctx.fillStyle = 'rgba(232,238,252,0.55)';
+    ctx.font = '600 12px Inter, PingFang SC, sans-serif';
+    ctx.fillText('f(x) = ' + fn.label + '   [' + fmt(fn.a) + ', ' + fmt(fn.b) + ']', L.pad.l, 22);
+
+    // readout
+    chordEl.textContent = fmt(mChord);
+    tanEl.textContent = showTan ? fmt(mTan) : '—';
+    cLabel.textContent = 'c = ' + (showTan ? fmt(c) : '—');
+    if (showTan && match) {
+      matchPill.classList.add('on');
+      matchPill.textContent = '✓ 斜率吻合 · 找到 c';
+    } else {
+      matchPill.classList.remove('on');
+      matchPill.textContent = showTan ? '滑动中…寻找平行' : '等待切线…';
+    }
+
+    // sync scrubber if animating
+    if (!demo.manual && showTan) {
+      const ratio = (c - fn.a) / (fn.b - fn.a);
+      cScrub.value = Math.round(ratio * 1000);
+    }
+  };
+
+  function ease(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  // phase durations (ms)
+  const PHASE_MS = [1400, 1100, 3200, 999999];
+
+  function tick(ts) {
+    if (!demo.lastTs) demo.lastTs = ts;
+    const dt = ts - demo.lastTs;
+    demo.lastTs = ts;
+
+    if (demo.playing && !demo.manual) {
+      demo.t += dt / PHASE_MS[demo.phase];
+      if (demo.t >= 1) {
+        demo.t = 0;
+        if (demo.phase < 3) {
+          demo.phase++;
+          // when entering phase 2, start from left
+          if (demo.phase === 2) demo.t = 0;
+          // when entering phase 3, snap to cStar
+          if (demo.phase === 3) {
+            demo.playing = false;
+            btnPlay.textContent = '▶ 播放';
+          }
+        }
+      }
+      // auto-pause near match during slide for dramatic effect
+      if (demo.phase === 2) {
+        const fn = getFn();
+        const u = ease(demo.t);
+        const c = fn.a + u * (fn.b - fn.a);
+        const diff = Math.abs(fn.fp(c) - chordSlope(fn));
+        if (diff < 0.02 * (1 + Math.abs(chordSlope(fn))) && demo.t > 0.15 && demo.t < 0.95) {
+          // linger: jump to hold
+          demo.phase = 3;
+          demo.t = 0;
+          demo.playing = false;
+          btnPlay.textContent = '▶ 播放';
+          demo.c = fn.cStar;
+        }
+      }
+    }
+
+    demo.draw();
+    requestAnimationFrame(tick);
+  }
+
+  function resetAnim(play) {
+    demo.phase = 0;
+    demo.t = 0;
+    demo.manual = false;
+    demo.playing = !!play;
+    demo.lastTs = 0;
+    btnPlay.textContent = play ? '▶ 播放中…' : '▶ 播放';
+    const fn = getFn();
+    cScrub.value = 0;
+  }
+
+  btnPlay.addEventListener('click', () => {
+    if (demo.phase >= 3) {
+      resetAnim(true);
+      return;
+    }
+    demo.manual = false;
+    demo.playing = true;
+    btnPlay.textContent = '▶ 播放中…';
+  });
+  btnPause.addEventListener('click', () => {
+    demo.playing = false;
+    btnPlay.textContent = '▶ 播放';
+  });
+  btnReplay.addEventListener('click', () => resetAnim(true));
+
+  cScrub.addEventListener('input', () => {
+    demo.manual = true;
+    demo.playing = false;
+    demo.phase = Math.max(demo.phase, 2);
+    btnPlay.textContent = '▶ 播放';
+  });
+
+  document.querySelectorAll('#fnSwitch .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#fnSwitch .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      demo.key = chip.dataset.fn;
+      resetAnim(true);
+    });
+  });
+
+  window.addEventListener('resize', () => { demo.resize(); });
+  demo.resize();
+  resetAnim(false);
+  // auto-start a bit of idle curve visible
+  demo.phase = 0;
+  demo.t = 1;
+  demo.phase = 1;
+  demo.t = 1;
+  requestAnimationFrame(tick);
+
+  /* ========== Example reveals ========== */
+  function setupReveal(id, btnId) {
+    const box = document.getElementById(id);
+    const btn = document.getElementById(btnId);
+    const items = [...box.querySelectorAll('.reveal-item')];
+    let n = 0;
+    btn.addEventListener('click', () => {
+      if (n < items.length) {
+        items[n].classList.add('show');
+        n++;
+        if (n >= items.length) btn.textContent = '已全部展开 ✓';
+        else btn.textContent = '显示下一步';
+      }
+    });
+  }
+  setupReveal('ex1', 'btnReveal1');
+  setupReveal('ex2', 'btnReveal2');
+
+  /* ========== Practice ========== */
+  function parseAnswer(raw) {
+    if (!raw) return NaN;
+    let s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
+    s = s.replace(/π/g, 'pi').replace(/ａ/g, 'a');
+    // fractions
+    if (s.includes('/')) {
+      const parts = s.split('/');
+      if (parts.length === 2) {
+        const a = evalSafe(parts[0]);
+        const b = evalSafe(parts[1]);
+        if (Number.isFinite(a) && Number.isFinite(b) && b !== 0) return a / b;
+      }
+    }
+    return evalSafe(s);
+  }
+
+  function evalSafe(s) {
+    s = s.replace(/pi/g, String(Math.PI));
+    // only allow digits, dots, operators, parentheses, e
+    if (!/^[-+*/().0-9e]+$/.test(s)) return NaN;
+    try {
+      // eslint-disable-next-line no-new-func
+      return Function('"use strict"; return (' + s + ');')();
+    } catch (e) {
+      return NaN;
+    }
+  }
+
+  document.querySelectorAll('.problem').forEach(prob => {
+    const input = prob.querySelector('input');
+    const btn = prob.querySelector('.check-btn');
+    const fb = prob.querySelector('.feedback');
+    const expected = parseFloat(prob.dataset.ans);
+    const tol = parseFloat(prob.dataset.tol) || 0.02;
+    const alt = (prob.dataset.alt || '').toLowerCase();
+
+    function check() {
+      const raw = input.value.trim();
+      if (!raw) {
+        fb.className = 'feedback soft';
+        fb.textContent = '先写下你的答案再检查～';
+        return;
+      }
+      const norm = raw.toLowerCase().replace(/\s+/g, '');
+      if (alt && (norm === alt || norm === alt.replace('π', 'pi'))) {
+        fb.className = 'feedback ok';
+        fb.textContent = '太棒了！答案正确。';
+        return;
+      }
+      const v = parseAnswer(raw);
+      if (!Number.isFinite(v)) {
+        fb.className = 'feedback soft';
+        fb.textContent = '没看懂这个写法，试试数字、分数或 π/2。';
+        return;
+      }
+      if (Math.abs(v - expected) <= tol) {
+        fb.className = 'feedback ok';
+        fb.textContent = '太棒了！答案正确。';
+      } else {
+        fb.className = 'feedback no';
+        fb.textContent = '还差一点。回顾：割线斜率 = f′(c)，解出 c 后检查是否在开区间内。';
+      }
+    }
+    btn.addEventListener('click', check);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+  });
+})();
+</script>
+</body>
+</html>
